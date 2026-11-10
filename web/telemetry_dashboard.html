@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Наблюдаемость лекционного ассистента</title>
+<style>
+:root{color-scheme:dark;--bg:#101722;--panel:#192535;--line:#2a3b50;--text:#e7edf5;--muted:#9baabe;--blue:#79b8ff;--green:#72d6a0;--amber:#ffd17d;--red:#ff8d8d}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1440px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid var(--line);padding-bottom:18px}h1{font-size:24px;margin:0}h2{font-size:18px;margin:0 0 14px}a{color:var(--blue)}.sub,.muted{color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}.card,section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}.card label{display:block;color:var(--muted);font-size:13px}.card strong{display:block;font-size:23px;margin-top:4px}section{margin:14px 0;overflow:auto}table{border-collapse:collapse;width:100%;min-width:700px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}.click{cursor:pointer}.click:hover{background:#21334a}.badge{display:inline-block;padding:2px 8px;border-radius:12px;background:#2a3b50}.ok{color:var(--green)}.warn{color:var(--amber)}.err{color:var(--red)}.timeline{display:grid;gap:8px}.span{border-left:3px solid var(--blue);padding:8px 12px;background:#142030}.span small{color:var(--muted)}.empty{color:var(--muted);padding:12px}.error{color:var(--red)}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0}.foot{color:var(--muted);font-size:12px}@media(max-width:620px){main{padding:14px}header{align-items:flex-start;flex-direction:column}}
+</style></head><body><main>
+<header><div><h1>Наблюдаемость лекционного ассистента</h1><div class="sub">Локальные запросы, трассы, ресурсы и события</div></div><a href="http://127.0.0.1:6006" target="_blank" rel="noopener">Открыть Phoenix →</a></header>
+<div id="cards" class="cards"></div>
+<section><h2>Последние запросы</h2><div id="traces" class="muted">Загрузка…</div></section>
+<section><h2>Детали трассы</h2><div id="detail" class="empty">Выберите запрос в таблице.</div></section>
+<section><h2>Оповещения</h2><div id="alerts" class="muted">Загрузка…</div></section>
+<div class="foot">Обновление каждые 5 секунд · данные доступны только на этом компьютере</div>
+</main><script>
+'use strict';
+const $=id=>document.getElementById(id), fmt=(n,d=1)=>n==null?'нет данных':Number(n).toFixed(d), safe=(v)=>v==null?'—':String(v);
+class ApiError extends Error {}
+async function get(path){let r;try{r=await fetch(path,{cache:'no-store'})}catch(e){throw new ApiError('Нет соединения с сервером: '+path)}if(!r.ok)throw new ApiError('Сервер вернул HTTP '+r.status+': '+path);try{return await r.json()}catch(e){throw new ApiError('Сервер вернул некорректные данные: '+path)}}
+function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=String(text);return x}
+function statusLabel(s){return ({answered:'Отвечен',insufficient_information:'Недостаточно данных',technical_error:'Техническая ошибка',interrupted:'Прерван',active:'Выполняется'})[s]||s||'—'}
+function renderCards(d){const specs=[['Всего запросов',d.total_requests],['Завершено',d.completed_requests],['Ответы',d.answered],['Недостаточно подтверждений',d.insufficient_information],['Технические ошибки',d.technical_error],['Активны',d.active],['Доля ошибок',fmt(d.error_rate*100)+'%'],['Доля отказов',fmt(d.refusal_rate*100)+'%'],['Среднее время',d.mean_seconds==null?'нет данных':fmt(d.mean_seconds)+' с'],['P95',d.p95_seconds==null?'нет данных':fmt(d.p95_seconds)+' с'],['Токены ввода',d.token_measurements?d.total_prompt_tokens+' ('+d.token_measurements+' зам.)':'нет данных'],['Токены ответа',d.token_measurements?d.total_output_tokens+' ('+d.token_measurements+' зам.)':'нет данных']];const box=$('cards');box.replaceChildren(...specs.map(([a,b])=>{const c=el('div','card');c.append(el('label','',a),el('strong','',safe(b)));return c}));const r=d.latest_resources||{};for(const [a,v] of [['RAM сборщика',r.monitor_rss_mib],['RAM процессов Ollama (общая)',r.ollama_rss_mib],['Занятая RAM Windows',r.system_used_mib]]){const c=el('div','card');c.append(el('label','',a),el('strong','',v==null?'нет данных':fmt(v)+' МиБ'));box.append(c)}}
+function renderTraces(rows){const root=$('traces');if(!rows.length){root.textContent='Пока нет запросов.';return}const table=el('table'),head=el('tr');for(const x of ['Время (UTC)','Статус','Длительность','Вопрос','Лекция','Модель / маршрут','RAM'])head.append(el('th','',x));const thead=el('thead');thead.append(head);table.append(thead);const body=el('tbody');for(const r of rows){const tr=el('tr','click');tr.tabIndex=0;tr.addEventListener('click',()=>loadDetail(r.run_id));tr.addEventListener('keydown',e=>{if(e.key==='Enter')loadDetail(r.run_id)});const vals=[r.created_at,statusLabel(r.status),r.duration_seconds==null?'—':fmt(r.duration_seconds)+' с',r.question,r.lecture,[r.model,r.route].filter(Boolean).join(' / ')||'—',r.peak_rss_mib==null?'нет данных':fmt(r.peak_rss_mib)+' МиБ'];vals.forEach((v,i)=>tr.append(el('td',i===1?(r.status==='technical_error'?'err':r.status==='insufficient_information'?'warn':'ok'):'',safe(v))));body.append(tr)}table.append(body);root.replaceChildren(table)}
+function renderDetail(d){
+  const root=$('detail');if(!d){root.textContent='Трасса не найдена.';return}
+  const opened=new Set([...root.querySelectorAll('details[open]')].map(x=>x.dataset.span));
+  root.replaceChildren();root.append(el('div','',statusLabel(d.trace.status)+' · '+safe(d.trace.question)),el('p','muted','Код запроса: '+d.trace.run_id));
+  const evaluations=new Map();for(const log of d.logs)if(log.name==='evaluation_result')evaluations.set(log.attributes.suite_id,log.attributes);
+  for(const value of evaluations.values()){
+    const block=el('div','span');block.append(el('strong',value.auto_passed?'ok':'err','Evals: '+(value.auto_passed?'автоматические критерии пройдены':'автоматические критерии не пройдены')));
+    block.append(el('p','muted','Сценарий '+value.case_id+' · эксперимент '+value.suite_id.slice(0,8)+' · ожидалось: '+statusLabel(value.expected_status)));
+    const human=value.manual_review;if(human?.complete)block.append(el('p','','Ручная оценка: правильность '+human.correctness+'/2, полнота '+human.completeness+'/2; правки '+(human.manual_edits?'нужны':'не нужны')));
+    else block.append(el('p','muted','Ручная оценка ещё не заполнена.'));
+    if(value.issues?.length)block.append(el('pre','warn',value.issues.join('\n')));root.append(block);
+  }
+  root.append(el('h3','','Шаги выполнения'));
+  const names={lecture_request:'Весь запрос',load:'Чтение лекции',rewrite:'Подготовка поиска',search:'Поиск фрагментов',route:'Выбор модели',draft:'Черновик ответа',validate:'Проверка цитат',review:'Проверка Gemma',revise:'Исправление ответа',accept:'Сохранение ответа',abstain:'Отказ от ответа',finish:'Завершение','memory.checkpoint':'Снимок задачи','memory.complete':'Обновление памяти',classify_question:'Классификация вопроса',get_quote:'Сверка цитаты с лекцией'};
+  const parents=new Map(d.spans.map(s=>[s.span_id,s.parent_id])),timeline=el('div','timeline');
+  for(const s of d.spans){
+    let depth=0,p=s.parent_id;const seen=new Set();while(p&&parents.has(p)&&!seen.has(p)){seen.add(p);depth++;p=parents.get(p)}
+    const box=el('div','span');box.style.marginLeft=Math.min(depth,5)*12+'px';
+    const label=names[s.name]||s.name, state=s.status==='OK'?'успешно':s.status==='ERROR'?'ошибка':'выполняется';
+    box.append(el('strong','',label+' · '+state),el('small','',' · '+(s.end_ns?fmt((s.end_ns-s.start_ns)/1e9)+' с':'выполняется')));
+    const model=s.attributes['llm.model_name'];if(model)box.append(el('div','muted','Модель: '+model+' · токены ввода: '+safe(s.attributes['llm.token_count.prompt'])+' · ответа: '+safe(s.attributes['llm.token_count.completion'])));
+    const details=el('details');details.dataset.span=s.span_id;details.open=opened.has(s.span_id);details.append(el('summary','','Промпт, ответ и технические данные'));
+    const attrs=el('pre');attrs.textContent=JSON.stringify(s.attributes,null,2);details.append(attrs);box.append(details);timeline.append(box);
+  }
+  root.append(timeline,el('h3','','Замечания и причины исправлений'));
+  const feedback=d.logs.filter(x=>x.name==='review_feedback');
+  if(feedback.length)for(const item of feedback)root.append(el('pre','warn',JSON.stringify(item.attributes,null,2)));else root.append(el('div','muted','Замечания не зарегистрированы.'));
+  const logs=el('details');logs.append(el('summary','','Все события запроса ('+d.logs.length+')'));const t=el('table'),b=el('tbody');
+  for(const l of d.logs){const tr=el('tr');[new Date(l.ts_ns/1e6).toLocaleString('ru-RU'),l.level,l.name,JSON.stringify(l.attributes)].forEach(x=>tr.append(el('td','',x)));b.append(tr)}
+  t.append(b);logs.append(t);root.append(logs);
+}
+function renderAlerts(rows){const root=$('alerts');if(!rows.length){root.textContent='Предупреждений пока нет.';return}const t=el('table'),b=el('tbody');for(const a of rows){const tr=el('tr');[new Date(a.created_at*1000).toLocaleString(),a.severity,a.code,a.message,a.run_id||'Общесистемное'].forEach(v=>tr.append(el('td','',v)));b.append(tr)}t.append(b);root.replaceChildren(t)}
+let selectedTrace=null,lastDetail='';
+const requestedTrace=new URLSearchParams(location.search).get('trace_id');
+if(requestedTrace&&/^[0-9a-f]{32}$/.test(requestedTrace))selectedTrace=requestedTrace;
+async function refresh(){try{const [s,t,a]=await Promise.all([get('/api/summary'),get('/api/traces'),get('/api/alerts')]);renderCards(s);renderTraces(t);renderAlerts(a);if(selectedTrace)await loadDetail(selectedTrace)}catch(e){console.error('Ошибка панели',e);const msg=e instanceof ApiError?e.message:'Ошибка отображения панели: '+e.message;$('cards').replaceChildren(el('div','error',msg));}}
+async function loadDetail(id){selectedTrace=id;try{const data=await get('/api/trace/'+encodeURIComponent(id));if(id!==selectedTrace)return;const encoded=JSON.stringify(data);if(encoded!==lastDetail){renderDetail(data);lastDetail=encoded}}catch(e){$('detail').textContent='Не удалось загрузить трассу.'}}
+refresh();setInterval(refresh,5000);
+</script></body></html>

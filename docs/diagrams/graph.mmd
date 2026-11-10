@@ -1,0 +1,46 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	load(load)
+	rewrite(rewrite)
+	search(search)
+	route(route)
+	draft(draft)
+	validate(validate)
+	review(review)
+	revise(revise)
+	accept(accept)
+	abstain(abstain)
+	finish(finish)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> load;
+	abstain --> finish;
+	accept --> finish;
+	draft -.-> finish;
+	draft -.-> validate;
+	load -.-> finish;
+	load -.-> rewrite;
+	review -.-> abstain;
+	review -.-> accept;
+	review -.-> finish;
+	review -.-> revise;
+	revise -.-> finish;
+	revise -.-> validate;
+	rewrite -.-> finish;
+	rewrite -.-> search;
+	route -.-> draft;
+	route -.-> finish;
+	search -.-> finish;
+	search -.-> route;
+	validate -.-> abstain;
+	validate -.-> finish;
+	validate -.-> review;
+	validate -.-> revise;
+	finish --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

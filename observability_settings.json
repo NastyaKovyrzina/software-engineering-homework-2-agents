@@ -1,0 +1,15 @@
+{
+  "retention_days": 14,
+  "slow_request_seconds": 180,
+  "stuck_request_seconds": 360,
+  "max_node_visits": 3,
+  "process_rss_limit_mib": 512,
+  "system_memory_percent_limit": 90,
+  "dashboard_port": 18736,
+  "phoenix_port": 6006,
+  "health_interval_seconds": 30,
+  "health_failures_before_alert": 2,
+  "health_timeout_seconds": 2,
+  "quality_min_success_rate": 0.8,
+  "quality_max_drop": 0.05
+}

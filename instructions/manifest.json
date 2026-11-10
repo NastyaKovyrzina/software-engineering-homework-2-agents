@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "shared": ["context/project.md", "context/sources.md", "context/memory.md"],
+  "roles": {
+    "search": {"system": "roles/search.md", "skills": ["skills/search.md"]},
+    "answer": {"system": "roles/answer.md", "skills": ["skills/answer.md"]},
+    "review": {"system": "roles/review.md", "skills": ["skills/review.md"]},
+    "revise": {"system": "roles/answer.md", "skills": ["skills/answer.md", "skills/revise.md"]}
+  }
+}

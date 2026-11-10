@@ -1,0 +1,6 @@
+[
+  {"role_id": "search", "name": "se-qwen05:latest", "role": "Формулирование поискового запроса", "disable_thinking": false},
+  {"role_id": "simple", "name": "qwen3:0.6b-q4_K_M", "role": "Ответы на простые вопросы", "disable_thinking": true},
+  {"role_id": "complex", "name": "qwen3.5:2b-q4_K_M", "role": "Ответы на сложные вопросы", "disable_thinking": true},
+  {"role_id": "review", "name": "gemma3:1b-it-q4_K_M", "role": "Проверка ответа", "disable_thinking": false}
+]

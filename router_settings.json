@@ -1,0 +1,10 @@
+{
+  "model_id": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+  "revision": "0a71e92a985b6e1ad1828cf67ce9c459639c1dca",
+  "directory": "D:/Ollama/Models/lecture-router-minilm",
+  "margin_threshold": 0,
+  "hypotheses": {
+    "simple": "Этот учебный вопрос просит найти один факт, название, дату или определение в тексте.",
+    "complex": "Этот учебный вопрос требует сравнения, объяснения причин или объединения нескольких фактов."
+  }
+}

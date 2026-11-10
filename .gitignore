@@ -1,0 +1,16 @@
+.venv/
+.observability-venv/
+__pycache__/
+*.log
+.tools-test-*/
+results/
+demo_tools_report.json
+.graph-test-*/
+runs/
+.format-test-*/
+.gateway.json
+sandbox-settings/
+.vscode/
+logs/
+data/lectures/eval_*
+data/lectures/scenario_*
